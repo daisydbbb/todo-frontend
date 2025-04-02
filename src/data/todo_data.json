@@ -1,0 +1,26 @@
+{
+  "user1@example.com": [
+    {
+      "id": "1",
+      "text": "Buy groceries",
+      "completed": false
+    },
+    {
+      "id": "2",
+      "text": "Finish homework",
+      "completed": true
+    },
+    {
+      "id": "3",
+      "text": "Call parents",
+      "completed": false
+    }
+  ],
+  "user2@example.com": [
+    {
+      "id": "1",
+      "text": "Read a book",
+      "completed": false
+    }
+  ]
+}
