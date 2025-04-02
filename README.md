@@ -6,7 +6,7 @@ This frontend project uses React + Bootstrap
 
 ### Clone the frontend repo
 
-Click on the green <>Code button
+Click on the green "Code" button <br>
 Copy repo link: `https://github.com/<yourusername>/todo-frontend.git` <br>
 In your local terminal: <br>
 `git clone https://github.com/<yourusername>/todo-frontend.git` <br>
