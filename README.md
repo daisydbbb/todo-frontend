@@ -1,12 +1,15 @@
 # TODO LIST APP (Frontend)
 
-The frontend uses React + Bootstrap
+This frontend project uses React + Bootstrap
 
-## Setup and Run the application
+## Instructions to Setup and Run the application locally
 
 ### Clone the frontend repo
 
-`git clone https://github.com/<yourusername>/todo-frontend.git`
+Click on the green <>Code button
+Copy repo link: `https://github.com/<yourusername>/todo-frontend.git` <br>
+In your local terminal: <br>
+`git clone https://github.com/<yourusername>/todo-frontend.git` <br>
 `cd todo-frontend`
 
 ### Install dependencies
@@ -15,7 +18,7 @@ The frontend uses React + Bootstrap
 
 ### Start the react app
 
-`npm start`
+`npm start` <br>
 The app will run at: http://localhost:3000
 
 ### 👩‍💻 Author
