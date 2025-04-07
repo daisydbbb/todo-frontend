@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 // import userData from "../data/user_data.json";
 // import todoData from "../data/todo_data.json";
@@ -11,38 +11,41 @@ export default function Todo() {
   const [currentUser, setCurrentUser] = useState(null);
   const [tasks, setTasks] = useState([]); // list of todo tasks
   const [taskToEdit, setTaskToEdit] = useState(null); // single task, add/edit
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const token = sessionStorage.getItem("token");
 
+  const fetchTasks = useCallback(async () => {
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    try {
+      setIsLoading(true);
+      const decoded = jwtDecode(token);
+      setCurrentUser(decoded);
+
+      const res = await axios.get("http://localhost:5001/api/tasks", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTasks(res.data);
+      setError(null);
+    } catch (error) {
+      console.error("Error in fetching data: ", error);
+      setError("Session expired or unauthorized, please try again!");
+      sessionStorage.clear();
+      navigate("/login");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token, navigate]);
+
   useEffect(() => {
-    const token = sessionStorage.getItem("token");
-    const fetTasks = async () => {
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-      try {
-        // get currentUser
-        const decoded = jwtDecode(token);
-        setCurrentUser(decoded);
+    fetchTasks();
+  }, [fetchTasks]);
 
-        const res = await axios.get("http://localhost:5001/api/tasks", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setTasks(res.data);
-      } catch (error) {
-        console.log("Error in fetching data: ", error);
-        alert("Sesson expired or unauthorized, please try again!");
-        sessionStorage.clear();
-        navigate("/login");
-      }
-    };
-    fetTasks();
-  }, [navigate]);
-
-  const handleAddOrEdit = (task) => {
+  const handleAddOrEdit = async (task) => {
     try {
       if (taskToEdit) {
         // edit
@@ -51,10 +54,11 @@ export default function Todo() {
         setTaskToEdit(null);
       } else {
         //add
-        setTasks([...tasks, task]);
+        setTasks((prevTasks) => [...prevTasks, task]);
       }
     } catch (error) {
       console.error("Failed to Edit/Add: ", error);
+      setError("Failed to update task. Please try again.");
     }
   };
 
@@ -63,9 +67,10 @@ export default function Todo() {
       await axios.delete(`http://localhost:5001/api/tasks/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setTasks(tasks.filter((task) => task._id !== id));
+      setTasks((prevTasks) => prevTasks.filter((task) => task._id !== id));
     } catch (error) {
       console.error("Failed to delete: ", error);
+      setError("Failed to delete task. Please try again.");
     }
   };
 
@@ -77,41 +82,48 @@ export default function Todo() {
       const res = await axios.put(
         `http://localhost:5001/api/tasks/${task._id}`,
         { text: task.text, completed: !task.completed },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      const updatedTasks = tasks.map((t) => (t._id === id ? res.data : t));
-      setTasks(updatedTasks);
+      setTasks((prevTasks) =>
+        prevTasks.map((t) => (t._id === id ? res.data : t))
+      );
     } catch (error) {
       console.error("Failed to toggle completion: ", error);
+      setError("Failed to update task status. Please try again.");
     }
   };
 
   // if user not logged in
   if (!currentUser) {
     return (
-      <div className="container mt-5">
+      <div className="container mt-5 text-center">
         <h2>Please login to see the todo list!</h2>
       </div>
     );
   }
 
   return (
-    <div className="container mt-5">
-      <div className="text-end mb-2">
-        <h5 className="mb-1">Welcome, {currentUser.username} 👋</h5>
+    <div className="container mt-3 mt-md-5 px-3 px-md-5">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h5 className="mb-0">Welcome, {currentUser.username} 👋</h5>
         <button
           className="btn btn-sm btn-outline-secondary"
           onClick={() => {
-            sessionStorage.removeItem("currentUser");
+            sessionStorage.clear();
             navigate("/login");
           }}
         >
           Log out
         </button>
       </div>
-      <h2 className="text-center">TODO LIST</h2>
+
+      <h2 className="text-center mb-4">TODO LIST</h2>
+
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      )}
 
       <TaskForm
         onSubmit={handleAddOrEdit}
@@ -119,40 +131,46 @@ export default function Todo() {
         taskToEdit={taskToEdit}
       />
 
-      <div className="container mt-4 text-center w-75 wt-auto">
-        {tasks.length === 0 ? (
-          <p>Add your FIRST task!</p>
+      <div className="container mt-4">
+        {isLoading ? (
+          <div className="text-center">
+            <div className="spinner-border" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        ) : tasks.length === 0 ? (
+          <p className="text-center">Add your FIRST task!</p>
         ) : (
-          <ul className="list-group">
+          <div className="list-group">
             {tasks.map((t) => (
-              <li
+              <div
                 key={t._id}
-                className="list-group-item d-flex justify-content-between align-items-center mb-2"
+                className="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-center mb-2 p-3"
               >
                 <div
+                  className={`flex-grow-1 mb-2 mb-md-0 ${
+                    t.completed ? "text-decoration-line-through text-muted" : ""
+                  }`}
                   style={{ cursor: "pointer" }}
-                  className={t.completed ? "text-decoration-line-through" : ""}
                   onClick={() => handleToggleComplete(t._id)}
                 >
                   {t.text}
                 </div>
-                <div>
+                <div className="d-flex gap-2">
                   <button
                     type="button"
-                    className="btn btn-sm btn-outline-primary me-2"
+                    className="btn btn-sm btn-outline-primary"
                     onClick={() => setTaskToEdit(t)}
                   >
                     Edit
                   </button>
-
                   <button
                     type="button"
-                    className="btn btn-sm btn-outline-success me-2"
+                    className="btn btn-sm btn-outline-success"
                     onClick={() => handleToggleComplete(t._id)}
                   >
                     {t.completed ? "Undo" : "Done"}
                   </button>
-
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-danger"
@@ -161,9 +179,9 @@ export default function Todo() {
                     Delete
                   </button>
                 </div>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </div>
     </div>
